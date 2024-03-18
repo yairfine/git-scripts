@@ -7,4 +7,8 @@ if [ "$1" = "-f" ]; then
     git fetch
 fi
 
+# pull current checkout branch
+git merge --ff-only "@{upstream}"
+
+# pull all other branches
 git for-each-ref --format='git fetch . %(upstream):%(refname)' refs/heads/ | sh
