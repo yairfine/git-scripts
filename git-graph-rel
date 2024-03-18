@@ -19,4 +19,4 @@ done
 MERGE_BASE=$(git merge-base --octopus $*)
 
 # print simplified graph
-git log --graph --oneline --decorate --simplify-by-decoration --topo-order --boundary ^$MERGE_BASE $*
+git log --graph --oneline --decorate --simplify-by-decoration --first-parent --topo-order --boundary ^$MERGE_BASE $*
