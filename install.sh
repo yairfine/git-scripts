@@ -19,4 +19,4 @@ else # default destintaion
 fi
 
 # install all scripts to destination
-install -C -m 755 $GIT_SCRIPTS_DIR/git-* $DEST
+install -v -C -m 755 $GIT_SCRIPTS_DIR/git-* $DEST
