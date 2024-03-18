@@ -18,6 +18,7 @@ done
 # --opctopus for getting LCA in case one ref is ancestor of the other
 MERGE_BASE=$(git merge-base --octopus $*)
 
+STYLE=" %C(auto)%h%C(reset)%C(auto)%d%C(reset) %C(white)%s%C(reset)  %C(dim white)%an%C(reset) %n"
+
 # print simplified graph
-git log --graph --pretty=format:" %C(auto)%h%C(reset)%C(auto)%d%C(reset) %C(white)%s%C(reset)  %C(dim white)%an%C(reset) %n" \
-        --decorate --simplify-by-decoration --first-parent --topo-order $* --not $MERGE_BASE~
+git log --graph --pretty=format:"$STYLE" --decorate --simplify-by-decoration --first-parent --topo-order $* --not $MERGE_BASE~
