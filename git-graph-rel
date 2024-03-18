@@ -10,8 +10,8 @@ fi
 # Loop through each argument and check it is a valid ref
 for ref in "$@"; do
     if ! git rev-parse --quiet --verify $ref &>/dev/null; then
-    echo "'$ref' does not exist"
-    exit
+        echo "'$ref' does not exist"
+        exit
     fi
 done
 
