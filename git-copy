@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+
+# copy files with history
+
+if [ $# -eq 2 ]; then
+    SRC=$1
+    DST=$2
+else
+    echo "Usage: $(basename $0) <src> <dst>"
+    echo $#
+    exit
+fi
+
+if [[ ! -f $SRC ]]; then
+    echo "$SRC is not a file"
+    exit 1
+fi
+
+SRC_FILENAME=$(basename $SRC)
+DST_FILENAME=$(basename $DST)
+DST_DIR=$(dirname $DST)
+TMP_COPY_FILE=$SRC.copy
+
+mkdir -pv "${DST_DIR}"
+
+git mv ${SRC} ${DST}
+git commit -m "copied ${SRC_FILENAME} to ${DST_FILENAME}"
+
+LABEL=$(git rev-parse HEAD)
+git reset --hard HEAD^
+git mv ${SRC} ${TMP_COPY_FILE}
+git commit -m "save temporary copy of ${SRC_FILENAME}"
+
+git merge --no-ff -m "merged both paths to preserve ${SRC_FILENAME} and ${DST_FILENAME}" --strategy resolve ${LABEL}
+
+git mv ${TMP_COPY_FILE} ${SRC}
+git commit -m "restore original name of ${SRC_FILENAME}"
