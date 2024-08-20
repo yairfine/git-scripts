@@ -1,0 +1,57 @@
+#!/usr/bin/env sh
+
+OPTIONS_SPEC="\
+git copy [options] <src> <dst>
+git copy [options] <src>:<dst>...
+--
+v,verbose    enable verbose logging
+"
+
+# Parse options
+eval "$(
+    echo "$OPTIONS_SPEC" |
+        git rev-parse --parseopt --keep-dashdash -- "$@" ||
+        echo exit $?
+)"
+
+# Default values
+verbose=false
+
+# Handle options and arguments
+for opt in "$@"; do
+    case "$opt" in
+    --verbose | -v)
+        verbose=true
+        shift
+        ;;
+    --)
+        shift
+        break
+        ;;
+    -*)
+        echo "Unknown option: $1"
+        exit 1
+        ;;
+    *)
+        break
+        ;;
+    esac
+done
+
+# process the <src>:<dst> pairs
+while [ "$#" -gt 0 ]; do
+    src_dst="$1"
+    src="${src_dst%%:*}"
+    dst="${src_dst##*:}"
+
+    echo "Processing source: $src, destination: $dst"
+
+    shift
+done
+
+# process verbose flag
+if $verbose; then
+    echo "verbose processing enabled"
+else
+    echo "verbose processing disabled"
+fi
