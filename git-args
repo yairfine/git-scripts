@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 
 OPTIONS_SPEC="\
-git copy [options] <src> <dst>
 git copy [options] <src>:<dst>...
 --
 v,verbose    enable verbose logging
@@ -15,7 +14,6 @@ eval "$(
 )"
 
 # Default values
-src_dst_pairs=()
 verbose=false
 
 # Handle options and arguments
@@ -39,29 +37,15 @@ for opt in "$@"; do
     esac
 done
 
-# Now process the <src>:<dst> pairs or <src> <dst> pairs
+# process the <src>:<dst> pairs
 while [ "$#" -gt 0 ]; do
-    if [[ "$1" == *:* ]]; then
-        # Handle the <src>:<dst> format
-        src_dst_pairs+=("$1")
-        shift
-    elif [ "$#" -gt 1 ]; then
-        # Handle the <src> <dst> format
-        src="$1"
-        dst="$2"
-        src_dst_pairs+=("$src:$dst")
-        shift 2
-    else
-        echo "Invalid argument format: $1"
-        exit 1
-    fi
-done
+    src_dst="$1"
+    src="${src_dst%%:*}"
+    dst="${src_dst##*:}"
 
-# Process the collected pairs
-for pair in "${src_dst_pairs[@]}"; do
-    src="${pair%%:*}"
-    dst="${pair##*:}"
     echo "Processing source: $src, destination: $dst"
+
+    shift
 done
 
 # process verbose flag
