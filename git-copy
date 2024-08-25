@@ -24,14 +24,14 @@ TMP_COPY_FILE=$SRC.copy
 mkdir -pv "${DST_DIR}"
 
 git mv ${SRC} ${DST}
-git commit -m "copied ${SRC_FILENAME} to ${DST_FILENAME}"
+git commit -m "Copied ${SRC_FILENAME} to ${DST_FILENAME}"
 
 LABEL=$(git rev-parse HEAD)
 git reset --hard HEAD^
 git mv ${SRC} ${TMP_COPY_FILE}
-git commit -m "save temporary copy of ${SRC_FILENAME}"
+git commit -m "Save temporary copy of ${SRC_FILENAME}"
 
-git merge --no-ff -m "merged both paths to preserve ${SRC_FILENAME} and ${DST_FILENAME}" --strategy resolve ${LABEL}
+git merge --no-ff -m "Merged paths to preserve both ${SRC_FILENAME} and ${DST_FILENAME}" --strategy resolve ${LABEL}
 
 git mv ${TMP_COPY_FILE} ${SRC}
-git commit -m "restore original name of ${SRC_FILENAME}"
+git commit -m "Restore original name of ${SRC_FILENAME}"
