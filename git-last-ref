@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+
+# find the last annotated commit while walking through commits history of <rev>
+# note that if <rev> is annotated, it will be returned
+
+if [ $# -eq 0 ]; then
+    echo "Usage: git last-ref <rev>"
+    exit
+fi
+
+COMMIT="$1"
+
+if ! git rev-parse --quiet --verify $COMMIT &>/dev/null; then
+    echo "'$COMMIT' does not exist"
+    exit
+fi
+
+while [[ $(git for-each-ref --points-at $COMMIT) == "" ]]
+do
+    COMMIT="$COMMIT~"
+done
+
+LAST_REF=$(git for-each-ref --format='%(refname)' --count=1 --points-at $COMMIT)
+
+echo $LAST_REF
