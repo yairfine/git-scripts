@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
 
-# find the last annotated commit while walking through commits history of <rev>
-# note that if <rev> is annotated, it will be returned
+# Find the last annotated commit while traversing the commit history of `<rev>`.  
+# Note that if `<rev>` itself is annotated, it will be returned.  
+# This script is roughly equivalent to `git rev-list -n 1 --simplify-by-decoration`, making it redundant.
 
 if [ $# -eq 0 ]; then
     echo "Usage: git last-ref <rev>"
