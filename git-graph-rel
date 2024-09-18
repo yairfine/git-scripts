@@ -8,16 +8,34 @@ if [ $# -eq 0 ]; then
 fi
 
 # Prepare the git command with quoted wildcard patterns
-patterns=()
-for pattern in "$@"; do
-  patterns+=("**/$pattern")
+wildcards_tokens=('*' '.' '?' '|' ']' '[')
+wildcards=()
+refs=()
+for arg in "$@"; do
+    is_wildcard=0
+    for wildcard in "${wildcards_tokens[@]}"; do
+        if [[ $arg == *"${wildcard}"* ]]; then
+            is_wildcard=1
+            wildcards+=("**/$arg")
+            break
+        fi
+    done
+    if [[ ! $is_wildcard == 1 ]]; then
+        refs+=("$arg")
+    fi
 done
 
-# Execute the git for-each-ref command with the patterns
-refs=$(git for-each-ref --format="%(refname:short)" "${patterns[@]}")
+# Execute the git for-each-ref command with the wildcards
+if [ ${#wildcards[@]} -eq 0 ]; then
+    expanded_wildcards_refs=""
+else
+    expanded_wildcards_refs=$(git for-each-ref --format="%(refname:short)" "${wildcards[@]}")
+fi
 
-# Loop through each argument and check it is a valid ref
-for ref in $refs; do
+ALL_REFS="$expanded_wildcards_refs ${refs[@]}"
+
+# Loop through each ref and check it is a valid ref
+for ref in $ALL_REFS; do
     if ! git rev-parse --quiet --verify $ref &>/dev/null; then
         echo "'$ref' does not exist"
         exit
@@ -25,9 +43,9 @@ for ref in $refs; do
 done
 
 # --opctopus for getting LCA in case one ref is ancestor of the other
-MERGE_BASE=$(git merge-base --octopus $refs)
+MERGE_BASE=$(git merge-base --octopus $ALL_REFS)
 
 STYLE=" %C(auto)%h%C(reset)%C(auto)%d%C(reset) %C(white)%s%C(reset)  %C(dim white)%an%C(reset) %n"
 
 # print simplified graph
-git log --graph --pretty=format:"$STYLE" --decorate --simplify-by-decoration --first-parent --topo-order $refs --not $(git rev-list -n 1 --simplify-by-decoration $MERGE_BASE)~
+git log --graph --pretty=format:"$STYLE" --decorate --simplify-by-decoration --first-parent --topo-order $ALL_REFS --not $(git rev-list -n 1 --simplify-by-decoration $MERGE_BASE)~
