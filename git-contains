@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+set -e
+
+usage () {
+    echo "usage: git contains <refspec>" >&2
+    echo >&2
+    echo "Print all refs (branches and tags) that contains the given ref." >&2
+}
+
+if [ $# -eq 1 ]; then
+    REF=$1
+else
+    usage
+    exit 1
+fi
+
+git branch --contains $REF
+git tag --contains $REF
