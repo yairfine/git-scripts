@@ -1,15 +1,21 @@
 #!/usr/bin/env sh
 set -e
 
-if [ $# -eq 0 ]; then
-    echo "Usage: $(basename $0) <rev> [main-branch]"
+if [ $# -ne 2 ]; then
+    echo "Usage: $(basename $0) <rev> <main-branch>"
     exit
+else
+    COMMIT="$1"
+    BRANCH="${2:-HEAD}"  # https://www.gnu.org/software/bash/manual/bash.html#Shell-Parameter-Expansion
 fi
 
-COMMIT="$1"
-
-# https://www.gnu.org/software/bash/manual/bash.html#Shell-Parameter-Expansion
-BRANCH=${2:-HEAD}
+if ! git rev-parse --quiet --verify $COMMIT &>/dev/null; then
+    echo "'$COMMIT' does not exist"
+    exit
+elif ! git rev-parse --quiet --verify $BRANCH &>/dev/null; then
+    echo "'$BRANCH' does not exist"
+    exit
+fi
 
 # create two lists, one of all merges to mainline, second is all decendants of the commit we want to find it's merge to mainline.
 # then, by comparing, sorting and removing duplicates, we can find the first commit
