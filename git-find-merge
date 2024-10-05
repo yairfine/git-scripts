@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+set -e
+
+if [ $# -eq 0 ]; then
+    echo "Usage: $(basename $0) <rev> [main-branch]"
+    exit
+fi
+
+COMMIT="$1"
+
+# https://www.gnu.org/software/bash/manual/bash.html#Shell-Parameter-Expansion
+BRANCH=${2:-HEAD}
+
+# create two lists, one of all merges to mainline, second is all decendants of the commit we want to find it's merge to mainline.
+# then, by comparing, sorting and removing duplicates, we can find the first commit
+(
+    git rev-list --ancestry-path $COMMIT..$BRANCH | cat -n;
+    git rev-list --first-parent $COMMIT..$BRANCH | cat -n;
+) |
+    sort -k2 -s |     # stable sort by hash
+    uniq -f1 -d |     # leave only commits that
+    sort -n |         # sort by ancestory again (we have the numbering from cat -n)
+    tail -1 | cut -f2 # take the first decendent merge commit
