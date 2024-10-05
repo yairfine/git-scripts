@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 set -e
 
 if [ $# -ne 2 ]; then
@@ -28,14 +28,13 @@ fi
 #     sort -n |         # sort by ancestory again (we have the numbering from cat -n)
 #     tail -1 | cut -f2 # take the first decendent merge commit
 
-decendants=$(git rev-list --ancestry-path --merges $COMMIT..$BRANCH)
-mainline=$(git rev-list --first-parent --merges $COMMIT..$BRANCH)  # --merges is redundant with --first-parent
+mkfifo pipe1 pipe2
 
-# for shells like `sh` that does not support `<()`, can redirect to a named pipe first:
-# mkfifo pipe1 pipe2
-# echo "$decendants" > pipe1 &
-# echo "$mainline" > pipe2 &
-# comm -12 pipe1 pipe2 | tail -1
-# rm pipe1 pipe2
+git rev-list --ancestry-path --merges $COMMIT..$BRANCH > pipe1 &
+git rev-list --first-parent --merges $COMMIT..$BRANCH  > pipe2 & # --merges is redundant with --first-parent
+comm -12 pipe1 pipe2 | tail -1
 
-comm -12 <(printf "%s" "$decendants") <(printf "%s" "$mainline") | tail -1
+rm pipe1 pipe2
+
+# in bash and zsh:
+# comm -12 <(printf "%s" "$decendants") <(printf "%s" "$mainline") | tail -1
