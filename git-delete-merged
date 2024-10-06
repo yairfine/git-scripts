@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+
+force=0
+
+if [[ $# -eq 1 ]] || [[ $# -ne 2 ]]; then
+    MAIN_BRANCH="$1"
+elif [[ $# -eq 2 ]]; then
+    MAIN_BRANCH="$2"
+    if [[ "$1" == "-f" ]] || [[ "$1" == "--force" ]]; then
+        force=1
+    else
+        echo "Usage: $(basename $0) [--force] <main-branch>"
+        exit 1
+    fi
+else
+    echo "Usage: $(basename $0) [--force] <main-branch>"
+    exit 1
+fi
+
+if ! git rev-parse --quiet --verify $MAIN_BRANCH &>/dev/null; then
+    echo "'$MAIN_BRANCH' does not exist"
+    exit
+fi
+
+
+if [[ $force -eq 0 ]]; then
+    git for-each-ref --merged=$MAIN_BRANCH --format='git branch --delete %(refname:short)' refs/heads | grep -v -w -e $MAIN_BRANCH
+
+elif [[ $force -eq 1 ]]; then
+    git for-each-ref --format='%(refname:short) %(upstream:short)' refs/heads | grep -v -w -e $MAIN_BRANCH | while read -r local_branch remote_branch; do
+        if [[ -n "$remote_branch" ]] ; then
+            # Check if the remote branch has been merged into mainline
+            if git merge-base --is-ancestor $remote_branch $MAIN_BRANCH ; then
+                echo "git branch --delete --force $local_branch"
+            fi
+        fi
+    done
+else
+    echo "something went wrong"
+    exit $force
+fi
