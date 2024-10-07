@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+
+if [ $# -ne 2 ]; then
+    echo "Usage: $(basename $0) <rev> <main-branch>"
+    exit
+else
+    COMMIT="$1"
+    BRANCH="${2:-HEAD}"
+fi
+
+if ! git rev-parse --quiet --verify $COMMIT &>/dev/null; then
+    echo "'$COMMIT' does not exist"
+    exit
+elif ! git rev-parse --quiet --verify $BRANCH &>/dev/null; then
+    echo "'$BRANCH' does not exist"
+    exit
+fi
+
+merge_commit=$(git find-merge $COMMIT $BRANCH)
+
+if [ -n "$merge_commit" ]; then
+    git show $merge_commit
+fi
