@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # merge all remote tracking branches into local branches (Fast-Forward only)
-# Supply -f flag to also update all remote tracking branches before merge
+# Supply -f,--fetch flag to also fetch all remote tracking branches before merge
 
-if [ "$1" = "-f" ]; then
-    git fetch
+if [[ "$1" == "-f" ]] || [[ "$1" == "--fetch" ]]; then
+    git fetch --all
 fi
 
 # pull current checkout branch
