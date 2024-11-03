@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -e
+
+# like `git mv` and `git rm`, also `git chmod` roughly equvalient to chmod & git add
+
+exec git update-index --chmod="$@"
