@@ -7,8 +7,15 @@ if [[ "$1" == "-f" ]] || [[ "$1" == "--fetch" ]]; then
     git fetch --all
 fi
 
-# pull current checkout branch
-git merge --ff-only "@{upstream}"
+CURRENT_BRANCH=$(git symbolic-ref --short -q HEAD)
+HEAD_IS_BRANCH_RET_VAL=$?
 
-# pull all other branches
-git for-each-ref --format='git fetch . %(upstream):%(refname)' refs/heads/ | sh
+# if checked out a branch (and not detached head)
+if [[ $HEAD_IS_BRANCH_RET_VAL -eq 0 ]]; then
+    # pull current checkout branch
+    git merge --ff-only "@{upstream}"
+fi
+
+# pull all other branches.
+# ${CURRENT_BRANCH:-^$} means CURRENT_BRANCH if it’s defined, or ^$ (which matches nothing) if CURRENT_BRANCH is empty.
+git for-each-ref --format='git fetch . %(upstream):%(refname)' refs/heads/ | grep -v -w -e "${CURRENT_BRANCH:-^$}" | sh
