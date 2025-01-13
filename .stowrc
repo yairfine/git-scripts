@@ -1,0 +1,5 @@
+--verbose
+--target=/usr/local/bin
+--ignore=.stowrc
+--ignore=install.sh
+--ignore=DS_Store
