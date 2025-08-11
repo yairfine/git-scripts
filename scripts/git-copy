@@ -2,36 +2,111 @@
 
 # copy files with history
 
-if [ $# -eq 2 ]; then
-    SRC=$1
-    DST=$2
-else
+if [ $# -lt 1 ]; then
     echo "Usage: $(basename $0) <src> <dst>"
-    echo $#
-    exit
-fi
-
-if [[ ! -f $SRC ]]; then
-    echo "$SRC is not a file"
+    echo "   or: $(basename $0) <src:dst> [<src:dst> ...]"
     exit 1
 fi
 
-SRC_FILENAME=$(basename $SRC)
-DST_FILENAME=$(basename $DST)
-DST_DIR=$(dirname $DST)
-TMP_COPY_FILE=$SRC.copy
+# Parse arguments - handle both old format (src dst) and new format (src:dst src:dst ...)
+PAIRS=()
+if [ $# -eq 2 ] && [[ "$1" != *":"* ]] && [[ "$2" != *":"* ]]; then
+    # Old format: git-copy src dst
+    PAIRS=("$1:$2")
+else
+    # New format: git-copy src:dst src:dst ...
+    for arg in "$@"; do
+        if [[ "$arg" != *":"* ]]; then
+            echo "Error: Invalid format '$arg'. Use src:dst format."
+            exit 1
+        fi
+        PAIRS+=("$arg")
+    done
+fi
 
-mkdir -pv "${DST_DIR}"
+# Validate all source files exist
+for pair in "${PAIRS[@]}"; do
+    SRC="${pair%%:*}"
+    if [[ ! -f "$SRC" ]]; then
+        echo "$SRC is not a file"
+        exit 1
+    fi
+done
 
-git mv ${SRC} ${DST}
-git commit -m "Copied ${SRC_FILENAME} to ${DST_FILENAME}"
+# Create destination directories
+for pair in "${PAIRS[@]}"; do
+    DST="${pair##*:}"
+    DST_DIR=$(dirname "$DST")
+    mkdir -pv "${DST_DIR}"
+done
+
+# First commit: move all files to their destinations
+COPY_MESSAGES=()
+for pair in "${PAIRS[@]}"; do
+    SRC="${pair%%:*}"
+    DST="${pair##*:}"
+    SRC_FILENAME=$(basename "$SRC")
+    DST_FILENAME=$(basename "$DST")
+    git mv "${SRC}" "${DST}"
+    COPY_MESSAGES+=("${SRC_FILENAME} to ${DST_FILENAME}")
+done
+
+if [ ${#PAIRS[@]} -eq 1 ]; then
+    git commit -m "Copied ${COPY_MESSAGES[0]}"
+else
+    git commit -m "Copied ${#PAIRS[@]} files: $(IFS=', '; echo "${COPY_MESSAGES[*]}")"
+fi
 
 LABEL=$(git rev-parse HEAD)
 git reset --hard HEAD^
-git mv ${SRC} ${TMP_COPY_FILE}
-git commit -m "Save temporary copy of ${SRC_FILENAME}"
 
-git merge --no-ff -m "Merged paths to preserve both ${SRC_FILENAME} and ${DST_FILENAME}" --strategy resolve ${LABEL}
+# Second commit: create temporary copies
+TMP_COPIES=()
+TEMP_MESSAGES=()
+for pair in "${PAIRS[@]}"; do
+    SRC="${pair%%:*}"
+    SRC_FILENAME=$(basename "$SRC")
+    TMP_COPY_FILE="$SRC.copy"
+    git mv "${SRC}" "${TMP_COPY_FILE}"
+    TMP_COPIES+=("$TMP_COPY_FILE")
+    TEMP_MESSAGES+=("${SRC_FILENAME}")
+done
 
-git mv ${TMP_COPY_FILE} ${SRC}
-git commit -m "Restore original name of ${SRC_FILENAME}"
+if [ ${#PAIRS[@]} -eq 1 ]; then
+    git commit -m "Save temporary copy of ${TEMP_MESSAGES[0]}"
+else
+    git commit -m "Save temporary copies of ${#PAIRS[@]} files: $(IFS=', '; echo "${TEMP_MESSAGES[*]}")"
+fi
+
+# Merge to preserve both original and copied files
+MERGE_MESSAGES=()
+for pair in "${PAIRS[@]}"; do
+    SRC="${pair%%:*}"
+    DST="${pair##*:}"
+    SRC_FILENAME=$(basename "$SRC")
+    DST_FILENAME=$(basename "$DST")
+    MERGE_MESSAGES+=("${SRC_FILENAME} and ${DST_FILENAME}")
+done
+
+if [ ${#PAIRS[@]} -eq 1 ]; then
+    git merge --no-ff -m "Merged paths to preserve both ${MERGE_MESSAGES[0]}" --strategy resolve ${LABEL}
+else
+    git merge --no-ff -m "Merged paths to preserve all files: $(IFS=', '; echo "${MERGE_MESSAGES[*]}")" --strategy resolve ${LABEL}
+fi
+
+# Restore original names
+RESTORE_MESSAGES=()
+for i in "${!PAIRS[@]}"; do
+    pair="${PAIRS[$i]}"
+    SRC="${pair%%:*}"
+    SRC_FILENAME=$(basename "$SRC")
+    TMP_COPY_FILE="${TMP_COPIES[$i]}"
+    git mv "${TMP_COPY_FILE}" "${SRC}"
+    RESTORE_MESSAGES+=("${SRC_FILENAME}")
+done
+
+if [ ${#PAIRS[@]} -eq 1 ]; then
+    git commit -m "Restore original name of ${RESTORE_MESSAGES[0]}"
+else
+    git commit -m "Restore original names of ${#PAIRS[@]} files: $(IFS=', '; echo "${RESTORE_MESSAGES[*]}")"
+fi
