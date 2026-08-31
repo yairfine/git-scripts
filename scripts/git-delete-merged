@@ -1,41 +1,53 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+
+# Print the `git branch --delete` commands for every local branch already merged
+# into ANY of the given branches.  Pipe to `sh` to actually delete.
+# -f,--force: match on the branch's upstream instead of the branch itself, to catch
+# branches whose PR was squashed or rebased, and delete with `--delete --force`.
+
+usage() {
+    echo "Usage: $(basename "$0") [--force] <main-branch>..." >&2
+    exit 1
+}
 
 force=0
+case "$1" in
+    -f | --force) force=1; shift ;;
+esac
 
-if [[ $# -eq 1 ]] || [[ $# -ne 2 ]]; then
-    MAIN_BRANCH="$1"
-elif [[ $# -eq 2 ]]; then
-    MAIN_BRANCH="$2"
-    if [[ "$1" == "-f" ]] || [[ "$1" == "--force" ]]; then
-        force=1
-    else
-        echo "Usage: $(basename $0) [--force] <main-branch>"
+[ $# -eq 0 ] && usage
+
+mains=("$@")
+
+for main in "${mains[@]}"; do
+    if ! git rev-parse --quiet --verify "$main" >/dev/null; then
+        echo "'$main' does not exist" >&2
         exit 1
     fi
-else
-    echo "Usage: $(basename $0) [--force] <main-branch>"
-    exit 1
-fi
+done
 
-if ! git rev-parse --quiet --verify $MAIN_BRANCH &>/dev/null; then
-    echo "'$MAIN_BRANCH' does not exist"
-    exit
-fi
+is_main() {
+    for main in "${mains[@]}"; do
+        [ "$1" = "$main" ] && return 0
+    done
+    return 1
+}
 
+merged_into_any() {
+    for main in "${mains[@]}"; do
+        git merge-base --is-ancestor "$1" "$main" 2>/dev/null && return 0
+    done
+    return 1
+}
 
-if [[ $force -eq 0 ]]; then
-    git for-each-ref --merged=$MAIN_BRANCH --format='git branch --delete %(refname:short)' refs/heads | grep -v -w -e $MAIN_BRANCH
+git for-each-ref --format='%(refname:short) %(upstream:short)' refs/heads |
+    while read -r branch upstream; do
+        is_main "$branch" && continue
 
-elif [[ $force -eq 1 ]]; then
-    git for-each-ref --format='%(refname:short) %(upstream:short)' refs/heads | grep -v -w -e $MAIN_BRANCH | while read -r local_branch remote_branch; do
-        if [[ -n "$remote_branch" ]] ; then
-            # Check if the remote branch has been merged into mainline
-            if git merge-base --is-ancestor $remote_branch $MAIN_BRANCH ; then
-                echo "git branch --delete --force $local_branch"
-            fi
+        if [ $force -eq 1 ]; then
+            [ -n "$upstream" ] && merged_into_any "$upstream" &&
+                echo "git branch --delete --force $branch"
+        else
+            merged_into_any "$branch" && echo "git branch --delete $branch"
         fi
     done
-else
-    echo "something went wrong"
-    exit $force
-fi
